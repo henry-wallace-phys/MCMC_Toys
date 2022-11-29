@@ -96,6 +96,4 @@ class hamiltonian_mcmc(GenericMCMC):
         for _ in range(self._leapfrog_steps):
             self.do_leapfrog_step()
 
-    def __call__(self, n_steps: int):
-        super().__call__(n_steps)
 
