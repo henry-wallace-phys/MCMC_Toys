@@ -1,0 +1,4 @@
+Packages :
+* Generic science stack (numpy, scipy etc.)
+* TQDM
+* pyROOT or upROOT
