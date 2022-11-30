@@ -3,22 +3,19 @@ Implementation of Metropolis-Hastings
 """
 from MCMC.MCMCBase import GenericMCMC
 import numpy as np
-from tqdm import tqdm
-
 
 class metropolis_hastings(GenericMCMC):
 
     def __init__(self):
-        super.__init__()
-        self._step_sizes: np.array(float) = None
+        super().__init__()
+        self._step_sizes: 'np.array(float)' = None
 
     @property
     def step_sizes(self) -> np.array(float):
         return self._step_sizes
 
     @step_sizes.setter
-    def step_sizes(self, proposed_sizes: np.array(float)) -> None:
-        assert (proposed_sizes, np.array(float))
+    def step_sizes(self, proposed_sizes: 'np.array(float)') -> None:
         self._step_sizes = proposed_sizes
 
     def accept_step(self) -> bool:
@@ -50,4 +47,7 @@ class metropolis_hastings(GenericMCMC):
 
     def __call__(self, n_steps: int):
         super().__call__(n_steps)
+
+    def __str__(self):
+        return f"Metropolis Hastings MCMC"
 

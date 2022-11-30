@@ -3,17 +3,18 @@ Implementation of Hamiltonian MCMC
 """
 from MCMC.MCMCBase import GenericMCMC
 import numpy as np
-from tqdm import tqdm
 import numdifftools as nd
 
 
 class hamiltonian_mcmc(GenericMCMC):
+
     def __init__(self) -> None:
+        super().__init__()
         self._time_step: int = 0
         self._leapfrog_steps: int = 0
         self._fulfilled_nuts: bool = False
 
-        self._current_momentum: np.array(float) = np.array(float)
+        self._current_momentum: 'np.array(float)' = None
         self._current_hamiltonian: float = -999
 
     @property
@@ -67,7 +68,7 @@ class hamiltonian_mcmc(GenericMCMC):
         self._proposed_step += self._time_step * self._current_momentum
         self.do_momentum_step()
 
-    def calculate_hamiltonian(self, momentum_vec: np.array(float), position_vec: np.array(float)) -> float:
+    def calculate_hamiltonian(self, momentum_vec: 'np.array(dtype=float)', position_vec: 'np.array(float)') -> float:
         """
         Gives us the Hamiltonian for the system
         :return: Total Hamiltonian
@@ -84,16 +85,21 @@ class hamiltonian_mcmc(GenericMCMC):
         """
         acceptance_lim = np.random.randint(0, 1)
 
-        prop_hamiltonian: float = self.calculate_hamiltonian(self._current_momentum, self._current_step)
-        alpha = min(1.0, np.exp(-prop_hamiltonian - self._current_hamiltonian))
+        prop_hamiltonian: float = self.calculate_hamiltonian(self._current_momentum, self._proposed_step)
+        alpha = min(1.0, np.exp(-prop_hamiltonian + self._current_hamiltonian))
 
         return alpha > acceptance_lim
 
     def do_mcmc_step(self) -> None:
         self.randomise_momentum()
-        self._current_hamiltonian = self._calculate_hamiltonian(self._current_momentum, self._current_step)
+        self._current_hamiltonian = self.calculate_hamiltonian(self._current_momentum, self._current_step)
 
         for _ in range(self._leapfrog_steps):
             self.do_leapfrog_step()
 
+    def __call__(self, n_steps: int) -> None:
+        super().__call__(n_steps)
+
+    def __str__(self):
+        return f"Hamiltonian MCMC using time step of {self._time_step} and {self._leapfrog_steps} leapfrog steps"
 
