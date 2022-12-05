@@ -24,7 +24,6 @@ class MCMCBase:
         self._current_llh = 999.0
         self._proposed_llh = 999.0
 
-
         # Variables relating to prior distributions
         # For brevity let's assume every prior we deal with is gaussian
         self._prior_nominal_arr = np.array([], dtype=float)
@@ -110,7 +109,7 @@ class GenericMCMC(MCMCBase, ABC):
     -
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     @abstractmethod
