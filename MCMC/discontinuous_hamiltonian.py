@@ -1,65 +1,134 @@
 from hamiltonian_mcmc import hamiltonian_mcmc
 import numpy as np
 import multiprocessing as mp
+from numdifftools import partial_derivative
 
 
 class discontinuous_hamiltonian(hamiltonian_mcmc):
     def __init__(self) -> None:
         super().__init__()
+        self._disc_array = np.array()  # Array of discontinuous indices
+        self._threshold: int = 0.00001
 
-    def do_leapfrog_step(self) -> None:
-        """
-        Overrides leapfrog steps for Hamiltonian MCMC
-        Accounts for discontinuities by giving a momentum condition
-        :return: None
-        """
-        self.do_momentum_step()
+        # For getting discontinuous momenta and positions in parallel
+        self._disc_mom_array = np.array()
+        self._disc_step_array = np.array()
 
+    # What do we want?
+    # Well
+    # Leap frog now does the following
+    # 1. For each point, check if leapfrog is continuous (we shall assume continuity <-> differentiability for now)
+    # 2. Do momentum + param steps for continuous params
+    # 3. Update disc params
+    # 4. Do momentum step for cts params
 
-    def disc_coord_integrator(self, proposed_step_temp: 'np.array(float)', curr_momentum_tmp: 'np.array(float)',
-                              step_index: int) -> 'list(int, float, float)':
-        """
-        Performs HMCMC step for discontinuous elements
-        :param curr_momentum_tmp:
-        :param proposed_step_temp: Temporary holder for propsoed step
-        :param step_index: Index
-        :return: index, change to momentum, change to o
-        """
-        proposed_step_init = proposed_step_temp
-        proposed_step_temp[step_index] += self._time_step * np.sign(curr_momentum_tmp[step_index])
+    @property
+    def threshold(self):
+        return self._threshold
 
-        # Work out difference in likelihoods between two points
-        delta_likelihood = self.calculate_llh(proposed_step_temp) - self.calculate_llh(proposed_step_init)
+    @threshold.setter
+    def threshold(self, new_thresh: float):
+        assert (new_thresh, float)
+        self._threshold = new_thresh
 
-        # Pass over the discontinuity
-        if abs(self._current_momentum[step_index] > delta_likelihood):
-            momentum_change = curr_momentum_tmp[step_index] - \
-                              np.sign(curr_momentum_tmp[step_index]) * delta_likelihood
+    def update_disc_params(self, index: int) -> None:
+        array_above = self._current_step
+        array_below = self._current_step
 
-            return [step_index, proposed_step_temp[step_index], momentum_change]
+        array_above[index] += np.finfo(float).eps
+        array_below[index] -= np.finfo(float).eps
 
-        # Reflect off the discontinuity
-        return [step_index, proposed_step_temp[step_index], -1 * curr_momentum_tmp[step_index]]
+        llh_above = self.calculate_llh(array_above)
+        llh_below = self.calculate_llh(array_below)
 
-    def coord_callback_func(self, update_params: list(int, float, float)) -> None:
-        # Updates current step and momentum
-        index: int = update_params[0]
-        step_change: float = update_params[1]
-        mom_change: float = update_params[2]
+        assym_cond = np.abs(llh_above - llh_below) / np.abs(llh_above + llh_below) > self._threshold
 
-        self._current_step[index] = step_change
-        self._current_momentum[index] = mom_change
+        self._disc_array[index] = assym_cond
 
-    def discontinuity_update_mp(self) -> None:
-        """
-        Updates params with discontinuities using multiprocessing
-        For now we assume all params are discontinuous since it just embeds on a smooth space
-        :return: None
-        """
-        # Potentially might be worth keeping track of what re-weighting makes discontinuous in MaCh3
+    def disc_params_processor(self):
+        self._disc_array = np.empty(self._current_step.size())
         pool = mp.pool()
-        for i_param in range(len(self._current_step)):
-            pool.apply_async(self.disc_coord_integrator, args=(i_param, ), callback=self.coord_update())
+        for i_param in range(self._disc_array.size):
+            pool.apply_async(self.update_disc_params, args=(i_param,))
         pool.close()
         pool.join()
 
+    # Functions to calculate the derivative of our potential and update the momentum
+    # for continuous parameters
+    def continuous_gradient_calculator(self, index: int) -> 'int, float':
+        grad_func = partial_derivative(self.calculate_llh(), index)
+        grad_val = grad_func(self._proposed_step)
+        return index, grad_val
+
+    def update_continuous_mom(self, index, gradient: float) -> None:
+        self._current_momentum[index] += self._time_step * 0.5 * gradient
+
+    def continuous_mom_processor(self):
+        continuous_params = np.where(self._disc_array == False)
+        pool = mp.pool()
+        for i_param in continuous_params:
+            pool.apply_async(self.continuous_gradient_calculator, args=(i_param,), callback=self.update_continuous_mom)
+        pool.close()
+        pool.join()
+
+    # Functions for updating the position of continuous params
+    def update_position(self, index: int):
+        self._proposed_step[index] += self._time_step * self._current_momentum * 0.5
+
+    def position_processor(self):
+        continuous_params = np.where(self._disc_array == False)
+        pool = np.pool()
+        for i_param in continuous_params:
+            pool.apply_async(self.update_position, args=(i_param,))
+        pool.close()
+        pool.join()
+
+    def discontinuous_integrator(self, index) -> 'int, float, float':
+        """
+        Does discontinuous step for each param
+        :param index: param index
+        :return: changed momentum for index and changed position
+        """
+        proposed_step_next = self._proposed_step
+        proposed_step_next[index] += self._time_step * np.sign(self._current_momentum[index])
+
+        current_llh = self.calculate_llh(self._proposed_step)
+        prop_llh = self.calculate_llh(proposed_step_next)
+
+        delta_likelihood = prop_llh - current_llh
+
+        if self._current_momentum[index] > delta_likelihood:
+            momentum_change = self._current_momentum[index] - np.sign(self._current_momentum[index]) * delta_likelihood
+            pos_change = self._proposed_step[index] + self._time_step * np.sign(self._current_momentum[index])
+        else:
+            momentum_change = self._current_momentum[index]
+            pos_change = -self._proposed_step[index]
+
+        return index, momentum_change, pos_change
+
+    def update_proposal_params(self, index: int, momentum_change: float, pos_change: float):
+        self._disc_cov_array[index] = pos_change
+        self._disc_mom_array[index] = momentum_change
+
+    def discontinuous_integrator_processor(self):
+        discontinuous_params = np.where(self._disc_array)
+        self._disc_mom_array = self._current_momentum
+        self._disc_step_array = self._current_step
+        pool = mp.pool()
+        for i_param in discontinuous_params:
+            pool.apply_async(self.discontinuous_integrator, args=(i_param,), callback=self.update_proposal_params)
+        pool.close()
+        pool.join()
+
+        self._current_momentum = self._disc_mom_array
+        self._current_step = self._disc_step_array
+
+    def do_leapfrog_step(self) -> None:
+        self.continuous_mom_processor()
+        self.position_processor()
+        self.discontinuous_integrator_processor()
+        self.position_processor()
+        self.continuous_mom_processor()
+
+    def __str__(self):
+        return f"Discontinuous Hamiltonian MCMC using time step of {self._time_step} and {self._leapfrog_steps} leapfrog steps"

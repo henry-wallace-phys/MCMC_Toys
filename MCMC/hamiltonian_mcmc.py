@@ -80,7 +80,6 @@ class hamiltonian_mcmc(GenericMCMC):
     def accept_step(self) -> bool:
         """
         Accept current step
-        :param init_hamiltonian: Hamiltonian pre-leapfrog
         :return: whether step is accepted
         """
         acceptance_lim = np.random.randint(0, 1)
@@ -91,6 +90,7 @@ class hamiltonian_mcmc(GenericMCMC):
         return alpha > acceptance_lim
 
     def do_mcmc_step(self) -> None:
+
         self.randomise_momentum()
         self._current_hamiltonian = self.calculate_hamiltonian(self._current_momentum, self._current_step)
 
