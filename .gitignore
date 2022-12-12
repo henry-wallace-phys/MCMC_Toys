@@ -1,3 +1,5 @@
 .i*
 *~
 .npy
+
+__pycache__
