@@ -1,21 +1,24 @@
-from MCMC import hamiltonian_mcmc, metropolis_hastings
+from MCMC import hamiltonian_mcmc, metropolis_hastings, discontinuous_hamiltonian
 import numpy as np
 
 if __name__ == "__main__":
     N_STEPS = 1000
-    SPACE_DIM = 2
+    SPACE_DIM = 10
 
     NOMINAL = np.zeros(SPACE_DIM)
     COV_ROOT = np.random.randn(SPACE_DIM, SPACE_DIM)
 
     COV = np.dot(COV_ROOT, COV_ROOT.T)
 
-    mh_mcmc = metropolis_hastings()
-    mh_mcmc.step_sizes = np.ones(SPACE_DIM)*0.2
+    mh_algo = metropolis_hastings
+    mh_algo.step_sizes=np.ones(SPACE_DIM)*0.1
 
-    h_mcmc = hamiltonian_mcmc()
-    h_mcmc.time_step = 0.01
+    h_mcmc = discontinuous_hamiltonian()
+    h_mcmc.time_step = 0.1
     h_mcmc.leapfrog_steps = 4
+    h_mcmc.continuous_params = np.ones(SPACE_DIM-5)
+    h_mcmc.discontinuous_params = np.zeros(5)
+
 
     mcmc_arr = [h_mcmc]
 
