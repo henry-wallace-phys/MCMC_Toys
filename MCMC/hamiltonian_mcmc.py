@@ -51,13 +51,16 @@ class hamiltonian_mcmc(GenericMCMC):
         self._current_momentum = np.random.multivariate_normal(np.zeros(len(self._prior_nominal_arr)),
                                                                np.diag(np.ones(len(self._prior_nominal_arr))))
 
-    def do_momentum_step(self) -> None:
+    def do_momentum_step(self, continuous_indices=None) -> None:
         """
         Calculates gradient of potential at given point
         :return:
         """
-        grad: float = -1 * nd.Gradient(self.calculate_llh)(self._proposed_step)
-        self._current_momentum -= self._time_step * 0.5 * grad
+        if(continuous_indices == None):
+            continuous_indices = self._current_momentum.size
+        grad = -1 * nd.Gradient(self.calculate_llh)(self._current_step)
+        for iMom in np.arange(continuous_indices):
+            self._current_momentum[iMom] -= self._time_step * 0.5 * grad[iMom] 
 
     def do_leapfrog_step(self) -> None:
         """
@@ -80,7 +83,6 @@ class hamiltonian_mcmc(GenericMCMC):
     def accept_step(self) -> bool:
         """
         Accept current step
-        :param init_hamiltonian: Hamiltonian pre-leapfrog
         :return: whether step is accepted
         """
         acceptance_lim = np.random.randint(0, 1)
@@ -91,6 +93,7 @@ class hamiltonian_mcmc(GenericMCMC):
         return alpha > acceptance_lim
 
     def do_mcmc_step(self) -> None:
+
         self.randomise_momentum()
         self._current_hamiltonian = self.calculate_hamiltonian(self._current_momentum, self._current_step)
 

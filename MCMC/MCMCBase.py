@@ -24,11 +24,10 @@ class MCMCBase:
         self._current_llh = 999.0
         self._proposed_llh = 999.0
 
-
         # Variables relating to prior distributions
         # For brevity let's assume every prior we deal with is gaussian
-        self._prior_nominal_arr = np.array([], dtype=float)
-        self._prior_covariance = np.array([], dtype=object)
+        self._prior_nominal_arr = None
+        self._prior_covariance = None
 
     # Setup nominal values for priors
     @property
@@ -36,7 +35,7 @@ class MCMCBase:
         return self._prior_nominal_arr
 
     @prior_nominal_arr.setter
-    def prior_nominal_arr(self, new_prior: 'np.array(dtype=float)') -> None:
+    def prior_nominal_arr(self, new_prior) -> None:
         self._prior_nominal_arr = new_prior
 
     # Setup standard deviations for gaussian priors
@@ -64,7 +63,7 @@ class MCMCBase:
     def accepted_step_arr(self) -> 'np.array(dtype=object)':
         return self._accepted_step_arr
 
-    def calculate_llh(self, eval_point: 'np.array(float)') -> float:
+    def calculate_llh(self, eval_point) -> float:
         # Let's do our LLH calculation
         return multivariate_normal(self._prior_nominal_arr, self._prior_covariance).logpdf(eval_point)
 
@@ -110,7 +109,7 @@ class GenericMCMC(MCMCBase, ABC):
     -
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     @abstractmethod
