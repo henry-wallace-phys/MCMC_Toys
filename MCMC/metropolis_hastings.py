@@ -1,10 +1,10 @@
 """
 Implementation of Metropolis-Hastings
 """
-from MCMC.MCMCBase import GenericMCMC
+from MCMC.mcmc_base import generic_mcmc
 import numpy as np
 
-class metropolis_hastings(GenericMCMC):
+class metropolis_hastings(generic_mcmc):
 
     def __init__(self):
         super().__init__()

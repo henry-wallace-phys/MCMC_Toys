@@ -9,7 +9,7 @@ Contains abstract MCMC class for multiclass implementations
 '''
 
 
-class MCMCBase:
+class mcmc_base:
     def __init__(self) -> None:
         # To keep track of accepted stuff
         self._accepted_step_arr: 'np.array(np.array(float))' = np.array([], dtype=object)
@@ -102,7 +102,7 @@ class MCMCBase:
         self._accepted_step_arr = np.load(infile)
 
 
-class GenericMCMC(MCMCBase, ABC):
+class generic_mcmc(mcmc_base, ABC):
     """
     Class with generic functions for use with mcmc
     -> Inherits from MCMC base class

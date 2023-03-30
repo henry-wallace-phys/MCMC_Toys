@@ -1,5 +1,5 @@
-from MCMC.MCMCBase import MCMCBase
-from MCMC.MCMCBase import GenericMCMC
+from MCMC.mcmc_base import mcmc_base
+from MCMC.mcmc_base import generic_mcmc
 from MCMC.metropolis_hastings import metropolis_hastings
 from MCMC.hamiltonian_mcmc import hamiltonian_mcmc
 from MCMC.discontinuous_hamiltonian import discontinuous_hamiltonian

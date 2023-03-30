@@ -1,12 +1,12 @@
 """
 Implementation of Hamiltonian MCMC
 """
-from MCMC.MCMCBase import GenericMCMC
+from MCMC.mcmc_base import generic_mcmc
 import numpy as np
 import numdifftools as nd
 
 
-class hamiltonian_mcmc(GenericMCMC):
+class hamiltonian_mcmc(generic_mcmc):
 
     def __init__(self) -> None:
         super().__init__()

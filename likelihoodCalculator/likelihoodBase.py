@@ -6,6 +6,5 @@ Base class for dealing with likelihoods, this interfaces with the other parts of
 
 
 class likelihoodBase:
-
     def __init__(self) -> None:
         pass
